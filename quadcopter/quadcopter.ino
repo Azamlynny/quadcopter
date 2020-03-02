@@ -2,6 +2,19 @@
 const int MPU_addr=0x68;  // I2C address of the MPU-6050
 int16_t AcX,AcY,AcZ,Tmp,GyX,GyY,GyZ;
 
+// PID Constants
+float P_pitch = 0.05; 
+float I_pitch = 0;
+int pitch_max = 0.5; 
+
+float P_yaw = 0.05;
+float I_yaw = 0;
+int yaw_max = 0.5;
+
+float P_roll = 0.05;
+float I_roll = 0;
+int roll_max = 0.05;
+
 void setup() {
   startGyro();  
 }
@@ -36,7 +49,7 @@ void pollGyro(){
 }
 
 void printGyroData(){
-  Serial.print("AcX = "); Serial.print(AcX);
+  Serial.print(" AcX = "); Serial.print(AcX);
   Serial.print(" | AcY = "); Serial.print(AcY);
   Serial.print(" | AcZ = "); Serial.print(AcZ);
   Serial.print(" | Tmp = "); Serial.print(Tmp/340.00+36.53);  //equation for temperature in degrees C from datasheet
