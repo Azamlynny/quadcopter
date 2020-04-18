@@ -1,4 +1,17 @@
 #include<Wire.h>
+#include <Servo.h>
+
+// Electronic Speed Controllers
+Servo ESC1;
+Servo ESC2;
+Servo ESC3;
+Servo ESC4;
+int ESC1_pin = 5; // temp val
+int ESC2_pin = 6;
+int ESC3_pin = 7;
+int ESC4_pin = 8;
+
+// Gyroscope
 const int MPU_addr=0x68;  // I2C address of the MPU-6050
 int16_t AcX,AcY,AcZ,Tmp,GyX,GyY,GyZ;
 
@@ -16,13 +29,27 @@ float I_roll = 0;
 int roll_max = 0.05;
 
 void setup() {
-  startGyro();  
+//  startGyro();
+  attachESC();  
 }
 
 void loop() {
-  pollGyro();
-  printGyroData();
-  delay(333);
+//  pollGyro();
+//  printGyroData();
+//  delay(333);
+
+  int M1Speed = 0;
+  int M2Speed = 0;
+  int M3Speed = 0;
+  int M4Speed = 0;
+  M1Speed = map(M1Speed, 0, 1, 0, 180); // scales values to servo library (value between 0 and 180)
+  M2Speed = map(M2Speed, 0, 1, 0, 180);
+  M3Speed = map(M3Speed, 0, 1, 0, 180);
+  M4Speed = map(M4Speed, 0, 1, 0, 180);
+  ESC1.write(potValue);    // Send the signal to the ESC
+  ESC2.write(potValue);    
+  ESC3.write(potValue);  
+  ESC4.write(potValue);   
 }
 
 void startGyro(){
@@ -34,7 +61,7 @@ void startGyro(){
   Serial.begin(9600);
 }
 
-void pollGyro(){
+void pollGyro(){ 
   Wire.beginTransmission(MPU_addr);
   Wire.write(0x3B);  // starting with register 0x3B (ACCEL_XOUT_H)
   Wire.endTransmission(false);
@@ -56,4 +83,12 @@ void printGyroData(){
   Serial.print(" | GyX = "); Serial.print(GyX);
   Serial.print(" | GyY = "); Serial.print(GyY);
   Serial.print(" | GyZ = "); Serial.println(GyZ);
+}
+
+void attachESC(){
+  // (pin, min pulse width, max pulse width in microseconds) 
+  ESC1.attach(ESC1_pin, 1000, 2000); 
+  ESC2.attach(ESC2_pin, 1000, 2000);
+  ESC3.attach(ESC3_pin, 1000, 2000);
+  ESC4.attach(ESC4_pin, 1000, 2000);
 }
