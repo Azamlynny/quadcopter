@@ -1,4 +1,3 @@
-
 double throttle = 0;
 double pitch = 0;
 double yaw = 0;
@@ -9,7 +8,7 @@ byte ch2pin = 10; // Pitch
 byte ch3pin = 11; // Throttle
 
 // Channel PWM configurations for RadioLink R12DS receiver
-short pwmTolerance = 25;
+short pwmTolerance = 30;
 
 short ch1max = 1890;
 short ch1min = 1090;
