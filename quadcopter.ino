@@ -96,6 +96,16 @@ void calculateInputs(){
       motor4 += -(pitch * 1/4);
     }
   }
+  if(yaw > tolerance || yaw < -tolerance){
+    if(yaw > 0){
+      motor4 += (yaw * 1/4);
+      motor1 += (yaw * 1/4);
+    }
+    else if(yaw < 0){
+      motor3 += -(yaw * 1/4);
+      motor2 += -(yaw * 1/4);
+    }
+  }
 }
 
 void resetMotors(){
