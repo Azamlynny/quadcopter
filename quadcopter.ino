@@ -1,11 +1,22 @@
+#include <Servo.h>
+
 double throttle = 0;
 double pitch = 0;
 double yaw = 0;
 
+double motor1;
+double motor2;
+double motor3;
+double motor4;
+
+int motorRest = 1000;
+int motorMin = 1150;
+int motorMax = 1800;
+
 // RadioLink R12DS receiver channel pins
-byte ch1pin = 9; // Yaw
-byte ch2pin = 10; // Pitch
-byte ch3pin = 11; // Throttle
+byte ch1pin = 7; // Yaw
+byte ch2pin = 6; // Pitch
+byte ch3pin = 5; // Throttle
 
 // Channel PWM configurations for RadioLink R12DS receiver
 short pwmTolerance = 30;
@@ -22,19 +33,104 @@ short ch3max = 1890;
 short ch3min = 1090;
 short ch3rest = 1090;
 
+// Electronic Speed Controller (ESC) constants
+short esc1pin = 8;
+short esc2pin = 9;
+short esc3pin = 10;
+short esc4pin = 11;
+
+short esc1min = 1200;
+short esc1max = 1900; 
+
+short esc2min;
+short esc2max;
+
+short esc3min;
+short esc3max;
+
+short esc4min;
+short esc4max;
+
+Servo ESC1, ESC2, ESC3, ESC4;
+
 void setup(){
 
   // RadioLink R12DS receiver channel pins
-  pinMode(9, INPUT);
-  pinMode(10, INPUT);
-  pinMode(11, INPUT);
+  pinMode(ch1pin, INPUT);
+  pinMode(ch2pin, INPUT);
+  pinMode(ch3pin, INPUT);
 
+  // Attach ECSs
+  ESC1.attach(esc1pin);
+  ESC2.attach(esc2pin);
+  ESC3.attach(esc3pin);
+  ESC4.attach(esc4pin);
+ 
   Serial.begin(9600);
 }
 
 void loop(){
+  resetMotors();
   readControllerValues() ;
   printControllerValues();
+  calculateInputs();
+  runMotors();
+  delay(10);
+}
+
+void calculateInputs(){
+  double tolerance = 0.02;
+  if(throttle > tolerance){
+    motor1 += throttle;
+    motor2 += throttle;
+    motor3 += throttle;
+    motor4 += throttle;
+  }
+  if(pitch > tolerance || pitch < -tolerance){
+    if(pitch > 0){
+      motor1 += (pitch * 1/4);
+      motor2 += (pitch * 1/4);
+    }
+    else if(pitch < 0){
+      motor3 += -(pitch * 1/4);
+      motor4 += -(pitch * 1/4);
+    }
+  }
+}
+
+void resetMotors(){
+  motor1 = 0;
+  motor2 = 0;
+  motor3 = 0;
+  motor4 = 0;
+}
+
+void runMotors(){
+  int motor1Speed = ((int) map(motor1*100, 0, 100, motorRest, motorMax));
+  int motor2Speed = ((int) map(motor2*100, 0, 100, motorRest, motorMax));
+  int motor3Speed = ((int) map(motor3*100, 0, 100, motorRest, motorMax));
+  int motor4Speed = ((int) map(motor4*100, 0, 100, motorRest, motorMax));
+
+  if(motor1Speed < motorMin){
+    motor1Speed = motorRest;
+  }
+
+  if(motor2Speed < motorMin){
+    motor2Speed = motorRest;
+  }
+
+  if(motor3Speed < motorMin){
+    motor3Speed = motorRest;
+  }
+
+  if(motor4Speed < motorMin){
+    motor4Speed = motorRest;
+  }
+  
+  ESC1.writeMicroseconds(motor1Speed);
+  ESC2.writeMicroseconds(motor2Speed);
+  ESC3.writeMicroseconds(motor3Speed);
+  ESC4.writeMicroseconds(motor4Speed);
 }
 
 void readControllerValues(){
