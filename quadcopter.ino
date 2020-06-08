@@ -1,8 +1,30 @@
-#include <Servo.h>
+#include <Servo.h> // Electronic Speed Controllers
+#include <Wire.h> // Reading data from the MPU6050
+
+
+// MPU-6050 Gyroscope and Accelerometer variables
+
+const int MPU_addr = 0x68;  // I2C address of the MPU-6050
+int16_t rawAccelX, rawAccelY, rawAccelZ, rawGyroX, rawGyroY;
+float accelX;
+float accelY;
+float accelZ;
+float gyroX;
+float gyroY;
+
+// Time
+
+float elapsedTime;
+float currentTime;
+float previousTime;
+
+// Controller input variables
 
 double throttle = 0;
 double pitch = 0;
 double yaw = 0;
+
+// Motor variables and constants
 
 double motor1;
 double motor2;
@@ -39,22 +61,10 @@ short esc2pin = 9;
 short esc3pin = 10;
 short esc4pin = 11;
 
-short esc1min = 1200;
-short esc1max = 1900; 
-
-short esc2min;
-short esc2max;
-
-short esc3min;
-short esc3max;
-
-short esc4min;
-short esc4max;
-
 Servo ESC1, ESC2, ESC3, ESC4;
 
 void setup(){
-
+  
   // RadioLink R12DS receiver channel pins
   pinMode(ch1pin, INPUT);
   pinMode(ch2pin, INPUT);
@@ -65,17 +75,66 @@ void setup(){
   ESC2.attach(esc2pin);
   ESC3.attach(esc3pin);
   ESC4.attach(esc4pin);
- 
+
+  // Begin wire communication with the MPU-6050
+  Wire.begin();
+  Wire.beginTransmission(MPU_addr);
+  Wire.write(0x6B);  // PWR_MGMT_1 register
+  Wire.write(0);     // set to zero (wakes up the MPU-6050)
+  Wire.endTransmission(true);
+
+  // Begin serial communication for debugging
   Serial.begin(9600);
 }
 
 void loop(){
   resetMotors();
+
+  calculateTime();
+  pollGyroData();
+    
   readControllerValues() ;
   printControllerValues();
   calculateInputs();
   runMotors();
   delay(10);
+}
+
+void convertGyroData(){ // Convert MPU-6050 data to known units
+  gyroX = rawGyroX / 131.0; // 131.0 is the conversion factor for the raw data to degrees/second from the datasheet
+  gyroY = rawGyroY / 131.0;
+  accelX = rawAccelX / 16384.0; // 16384.0 is the conversion factor for the raw data to "g" units from the datasheet
+  accelY = rawAccelY / 16384.0;
+  accelZ = rawAccelZ / 16384.0;
+}
+
+void pollGyroData(){
+  
+  // Request accelerometer values
+  Wire.beginTransmission(MPU_addr);
+  Wire.write(0x3B); // Ask for the 0x3B register - corresponds to accelX
+  Wire.endTransmission(false);
+  Wire.requestFrom(MPU_addr,6,true); // Request a total of 6 registers
+
+  // Values are stored in 2 registers - higher register shifted to the left and added using or |
+  rawAccelX = Wire.read()<<8|Wire.read(); 
+  rawAccelY = Wire.read()<<8|Wire.read();
+  rawAccelZ = Wire.read()<<8|Wire.read();
+
+  // Request gyroscope values
+  Wire.beginTransmission(MPU_addr);
+  Wire.write(0x43); // Ask for 0x43 register - corresponds to gyroX 
+  Wire.endTransmission(false);
+  Wire.requestFrom(MPU_addr,4,true); // Request a total of 4 registers
+
+  rawGyroX = Wire.read()<<8|Wire.read(); 
+  rawGyroY = Wire.read()<<8|Wire.read();
+}
+
+void calculateTime(){
+  previousTime = currentTime;  // the previous time is stored before the actual time read
+  currentTime = millis();  // actual time read
+  elapsedTime = (currentTime - previousTime) / 1000; 
 }
 
 void calculateInputs(){
