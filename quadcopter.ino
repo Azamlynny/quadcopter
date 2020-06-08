@@ -112,7 +112,7 @@ void loop() {
 
   calculateTime();
   pollGyroData();
-  //  printGyroData();
+//  printGyroData();
   calculateAngle();
   printAngleData();
 
@@ -156,9 +156,9 @@ void printGyroData() { // Prints the converted gyroscope and accelerometer data
   Serial.print("   AccelZ: ");
   Serial.print(accelZ);
   Serial.print("   GyroX: ");
-  //  Serial.print(gyroX);
+  Serial.print(gyroX);
   Serial.print("   GyroY: ");
-  //  Serial.print(gyroY);
+  Serial.print(gyroY);
   Serial.println("");
 }
 
