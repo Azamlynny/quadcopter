@@ -1,6 +1,33 @@
 #include <Servo.h> // Electronic Speed Controllers
 #include <Wire.h> // Reading data from the MPU6050
 
+// PID Constants
+
+float kPX = 3.55;
+float kIX = 0.005;
+float kDX = 2.05;
+
+float kPY = 3.55;
+float kIY = 0.005;
+float kDY = 2.05;
+
+float minAngle = 3;
+float desiredAngleX = 0;
+float desiredAngleY = 0;
+float errorX = 0;
+float errorY = 0;
+float previousErrorX = 0;
+float previousErrorY = 0;
+
+float pidPX = 0;
+float pidIX = 0;
+float pidDX = 0;
+float PIDX = 0;
+
+float pidPY = 0;
+float pidIY = 0;
+float pidDY = 0;
+float PIDY = 0;
 
 // MPU-6050 Gyroscope and Accelerometer variables
 
@@ -16,13 +43,13 @@ float accelZ = 0;
 float gyroX = 0;
 float gyroY = 0;
 float rad_to_deg = 180 / 3.141592654;
-float angleX = 0;
-float angleY = 0;
 float accelAngleX = 0;
 float accelAngleY = 0;
 float gyroAngleX = 0;
 float gyroAngleY = 0;
 boolean resetGyro = false;
+float angleX = 0;
+float angleY = 0;
 
 // Time
 
@@ -46,7 +73,7 @@ double motor3;
 double motor4;
 
 int motorRest = 1000;
-int motorMin = 1150;
+int motorMin = 1200;
 int motorMax = 1800;
 
 // RadioLink R12DS receiver channel pins
@@ -103,10 +130,12 @@ void setup() {
 }
 
 void loop() {
-//  if(millis() - startTime > loadTime && resetGyro == false){
+  if(millis() - startTime > loadTime && resetGyro == false){
+    desiredAngleX = angleX;
+    desiredAngleY = angleY;
 //    resetAngles();
 //    resetGyro = true;
-//  }
+  }
   
   resetMotors();
 
@@ -114,13 +143,58 @@ void loop() {
   pollGyroData();
 //  printGyroData();
   calculateAngle();
-  printAngleData();
+//  printPreCalculatedAngle();
+//  printAngleData();
 
-//  readControllerValues() ;
-  //  printControllerValues();
+  readControllerValues() ;
+//  printControllerValues();
   calculateInputs();
+
+  calculatePID();
+  printPID();
+  
   runMotors();
   delay(10);
+}
+
+void printPID(){
+  Serial.print("PIDX: ");
+  Serial.print(PIDX);
+  Serial.print("   PIDY: ");
+  Serial.print(PIDY);
+  Serial.println("");
+}
+
+void calculatePID(){
+  errorX = angleX - desiredAngleX;
+  errorY = angleY - desiredAngleY;
+
+  pidPX = kPX * errorX;
+  pidPY = kPY * errorY;
+
+  if(-minAngle < errorX < minAngle && kIX != 0){
+    pidIX = pidIX + (kIX * errorX);  
+  }
+  if(-minAngle < errorY < minAngle && kIY != 0){
+    pidIY = pidIY + (kIY * errorY);
+  }
+
+  if(kDX != 0){
+    pidDX = kDX * ((errorX - previousErrorX) / elapsedTime);
+  }
+  if(kDY != 0){
+    pidDY = kDY * ((errorY - previousErrorY) / elapsedTime);
+  }
+
+  //Individual lines for debugging
+  PIDX = 0;
+  PIDY = 0;
+  
+  PIDX += pidPX + pidIX + pidDX;  
+  PIDY += pidPY + pidIY + pidDY;
+
+  previousErrorX = errorX;
+  previousErrorY = errorY;
 }
 
 void resetAngles(){
@@ -134,6 +208,18 @@ void printAngleData() {
   Serial.print("   angleY: ");
   Serial.print(angleY);
   Serial.println("");
+}
+
+void printPreCalculatedAngle(){
+  Serial.print("accelAngleX: ");
+  Serial.print(accelAngleX);
+  Serial.print("   accelAngleY: ");
+  Serial.print(accelAngleY);
+  Serial.print("   gyroAngleX: ");
+  Serial.print(gyroAngleX);
+  Serial.print("   gyroAngleY: ");
+  Serial.print(gyroAngleY);
+  Serial.print("");
 }
 
 void calculateAngle() {
@@ -244,6 +330,25 @@ void runMotors() {
   int motor3Speed = ((int) map(motor3 * 100, 0, 100, motorRest, motorMax));
   int motor4Speed = ((int) map(motor4 * 100, 0, 100, motorRest, motorMax));
 
+  // PID Influence
+  if(PIDY < 0){
+    motor1Speed += -PIDY;
+    motor2Speed += -PIDY;  
+  }
+  else if(PIDY > 0){
+    motor3Speed += PIDY;
+    motor4Speed += PIDY;
+  }
+  
+  if(PIDX < 0){
+    motor3Speed += -PIDX;
+    motor2Speed += -PIDX;
+  }
+  else if(PIDY > 0){
+    motor4Speed += PIDX;
+    motor1Speed += PIDX;
+  }
+
   if (motor1Speed < motorMin) {
     motor1Speed = motorRest;
   }
@@ -258,6 +363,22 @@ void runMotors() {
 
   if (motor4Speed < motorMin) {
     motor4Speed = motorRest;
+  }
+
+  if(motor1Speed > motorMax){
+    motor1Speed = motorMax;
+  }
+
+  if(motor2Speed > motorMax){
+    motor2Speed = motorMax;
+  }
+  
+  if(motor3Speed > motorMax){
+    motor3Speed = motorMax;
+  }
+  
+  if(motor4Speed > motorMax){
+    motor4Speed = motorMax;
   }
 
   ESC1.writeMicroseconds(motor1Speed);
