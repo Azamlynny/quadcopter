@@ -3,13 +3,13 @@
 
 // PID Constants
 
-float kPX = 3.55;
-float kIX = 0.005;
-float kDX = 2.05;
+float kPX = 2;
+float kIX = 0;
+float kDX = 0;
 
-float kPY = 3.55;
-float kIY = 0.005;
-float kDY = 2.05;
+float kPY = 2;
+float kIY = 0;
+float kDY = 0;
 
 float minAngle = 3;
 float desiredAngleX = 0;
@@ -134,7 +134,7 @@ void loop() {
     desiredAngleX = angleX;
     desiredAngleY = angleY;
 //    resetAngles();
-//    resetGyro = true;
+    resetGyro = true;
   }
   
   resetMotors();
@@ -145,7 +145,7 @@ void loop() {
   calculateAngle();
 //  printPreCalculatedAngle();
 //  printAngleData();
-
+ 
   readControllerValues() ;
 //  printControllerValues();
   calculateInputs();
