@@ -3,15 +3,23 @@
 
 // PID Constants
 
-float kPX = 0.012;
-float kIX = 0;
-float kDX = 0;
+float kPX = 2;
+float kIX = 0.005;
+float kDX = 1.05;
 
-float kPY = 0;
-float kIY = 0;
-float kDY = 0;
+float kPY = 2;
+float kIY = 0.005;
+float kDY = 1.05;
 
-float minAngle = 3;
+//float kPX = 0;
+//float kIX = 0;
+//float kDX = 0;
+//
+//float kPY = 0;
+//float kIY = 0;
+//float kDY = 0;
+
+float minAngle = 1;
 float desiredAngleX = 0;
 float desiredAngleY = 0;
 float errorX = 0;
@@ -130,126 +138,132 @@ void setup() {
 }
 
 void loop() {
-  if(millis() - startTime > loadTime && resetGyro == false){
-    desiredAngleX = angleX;
-    desiredAngleY = angleY;
-////    resetAngles();
-    resetGyro = true;
-  }
-  
+  //  if(millis() - startTime > loadTime && resetGyro == false){
+  //    desiredAngleX = angleX;
+  //    desiredAngleY = angleY;
+  //////    resetAngles();
+  //    resetGyro = true;
+  //  }
+
   resetMotors();
 
   calculateTime();
   pollGyroData();
-//  printGyroData();
+  //  printGyroData();
   calculateAngle();
-//  printPreCalculatedAngle();
-//  printAngleData();
- 
+  printPreCalculatedAngle();
+
   readControllerValues() ;
-//  printControllerValues();
+  //  printControllerValues();
   calculateInputs();
 
   calculatePID();
-  printPID();
+  //  printPID();
 
-  if(resetGyro){
-    runMotors();
-  }
-  
+  //  if(resetGyro){
+  runMotors();
+  //  }
+  //  printAngleData();
+
+
   delay(1);
 }
 
-void printPID(){
+void printPID() {
   Serial.print("PIDX: ");
   Serial.print(PIDX);
   Serial.print("   PIDY: ");
-//  Serial.print(PIDY);
+  Serial.print(PIDY);
   Serial.println("");
 }
 
-void calculatePID(){
-  errorX = angleX - desiredAngleX;
-  errorY = angleY - desiredAngleY;
+void calculatePID() {
+  //  angleX += 6.2; // 6.2 tuning
+  //  angleY += -3.8; // -3.8 tuning
+  errorX = angleX - desiredAngleX ; // 5.2 tuning
+  errorY = angleY - desiredAngleY; // -3.6 tuning
 
   pidPX = kPX * errorX;
   pidPY = kPY * errorY;
 
-  if(-minAngle < errorX < minAngle && kIX != 0){
-    pidIX = pidIX + (kIX * errorX);  
+  if (-minAngle < errorX < minAngle && kIX != 0) {
+    pidIX = pidIX + (kIX * errorX);
   }
-  if(-minAngle < errorY < minAngle && kIY != 0){
+  if (-minAngle < errorY < minAngle && kIY != 0) {
     pidIY = pidIY + (kIY * errorY);
   }
 
-  if(kDX != 0){
+  if (kDX != 0) {
     pidDX = kDX * ((errorX - previousErrorX) / elapsedTime);
   }
-  if(kDY != 0){
+  if (kDY != 0) {
     pidDY = kDY * ((errorY - previousErrorY) / elapsedTime);
   }
 
   //Individual lines for debugging
   PIDX = 0;
   PIDY = 0;
-  
-  PIDX += pidPX + pidIX + pidDX;  
+
+  PIDX += pidPX + pidIX + pidDX;
   PIDY += pidPY + pidIY + pidDY;
+
+  PIDX = PIDX / 1000;
+  PIDY = PIDY / 1000;
 
   previousErrorX = errorX;
   previousErrorY = errorY;
 }
 
-void resetAngles(){
+void resetAngles() {
   angleX = 0;
   angleY = 0;
 }
 
-//void printAngleData() {
-//  Serial.print("angleX: ");
-//  Serial.print(angleX);
-//  Serial.print("   angleY: ");
-////  Serial.print(angleY);
-//  Serial.println("");
-//}
+void printAngleData() {
+  Serial.print("angleX: ");
+  Serial.print(angleX + 6.2);
+  Serial.print("   angleY: ");
+  Serial.print(angleY - 3.8);
+  Serial.println("");
+}
 
-//void printPreCalculatedAngle(){
+void printPreCalculatedAngle() {
 //  Serial.print("accelAngleX: ");
 //  Serial.print(accelAngleX);
 //  Serial.print("   accelAngleY: ");
 //  Serial.print(accelAngleY);
-//  Serial.print("   gyroAngleX: ");
-//  Serial.print(gyroAngleX);
-//  Serial.print("   gyroAngleY: ");
-//  Serial.print(gyroAngleY);
-//  Serial.print("");
-//}
+    Serial.print("   gyroAngleX: ");
+    Serial.print(gyroAngleX);
+    Serial.print("   gyroAngleY: ");
+    Serial.print(gyroAngleY);
+  Serial.println("");
+}
 
 void calculateAngle() {
   accelAngleX = atan((accelY) / sqrt(pow((accelX), 2) + pow((accelZ), 2))) * rad_to_deg;
   accelAngleY = atan((accelX) / sqrt(pow((accelY), 2) + pow((accelZ), 2))) * rad_to_deg;
-  
+
   gyroAngleX += gyroX * elapsedTime;
   gyroAngleY += gyroY * elapsedTime;
-  
+
   float gyroToAccelRatio = 0.96;
   angleX = gyroToAccelRatio * (angleX + gyroX * elapsedTime) + (1 - gyroToAccelRatio) * accelAngleX;
   angleY = gyroToAccelRatio * (angleY + gyroY * elapsedTime) + (1 - gyroToAccelRatio) * accelAngleY;
 }
 
-//void printGyroData() { // Prints the converted gyroscope and accelerometer data
-//  Serial.print("AccelX: ");
-//  Serial.print(accelX);
-//  Serial.print("   AccelY: ");
-//  Serial.print(accelY);
-//  Serial.print("   AccelZ: ");
-//  Serial.print(accelZ);
-//  Serial.print("   GyroX: ");
-//  Serial.print(gyroX);
-//  Serial.print("   GyroY: ");
-//  Serial.print(gyroY);
-//  Serial.println("");
-//}
+void printGyroData() { // Prints the converted gyroscope and accelerometer data
+  Serial.print("AccelX: ");
+  Serial.print(accelX);
+  Serial.print("   AccelY: ");
+  Serial.print(accelY);
+  Serial.print("   AccelZ: ");
+  Serial.print(accelZ);
+  Serial.print("   GyroX: ");
+  Serial.print(gyroX);
+  Serial.print("   GyroY: ");
+  Serial.print(gyroY);
+  Serial.println("");
+}
 
 void convertGyroData() { // Convert MPU-6050 data to known units
   gyroX = rawGyroX / 131.0; // 131.0 is the conversion factor for the raw data to degrees/second from the datasheet
@@ -299,52 +313,68 @@ void calculateInputs() {
     motor4 += throttle;
   }
 
-  
-  if(throttle > 0.2){ // Do not move the drone for autobalancing unless the user puts in some input
-  
+
+
+  if (throttle > 0.3) { // Do not move the drone for autobalancing unless the user puts in some input
+
     // PID Influence
-      if(PIDY < 0){
-        motor3 += -PIDY;
-        motor2 += -PIDY;  
-      }
-      else if(PIDY > 0){
-        motor4 += PIDY;
-        motor1 += PIDY;
-      }
-    
-  
-      if(PIDX < 0){
-        motor1 += -PIDX;
-        motor2 += -PIDX;
-      }
-      else if(PIDX > 0){
-        motor4 += PIDX;
-        motor3 += PIDX;
-      }
-    
+    if (PIDY < 0) {
+      motor1 += -PIDY;
+      motor2 += -PIDY;
+
+      motor3 += PIDY;
+      motor4 += PIDY;
+    }
+    else if (PIDY > 0) {
+      motor4 += PIDY;
+      motor3 += PIDY;
+      //
+      motor1 -= PIDY;
+      motor2 -= PIDY;
+    }
+
+
+    if (PIDX < 0) {
+      motor2 += -PIDX;
+      motor3 += -PIDX;
+
+      motor1 += PIDX;
+      motor4 += PIDX;
+    }
+    else if (PIDX > 0) {
+      motor4 += PIDX;
+      motor1 += PIDX;
+      //
+      motor2 -= PIDX;
+      motor3 -= PIDX;
+    }
+
 
   }
-  
-//  if (pitch > tolerance || pitch < -tolerance) {
-//    if (pitch > 0) {
-//      motor1 += (pitch * 1 / 4);
-//      motor2 += (pitch * 1 / 4);
-//    }
-//    else if (pitch < 0) {
-//      motor3 += -(pitch * 1 / 4);
-//      motor4 += -(pitch * 1 / 4);
-//    }
-//  }
-//  if (yaw > tolerance || yaw < -tolerance) {
-//    if (yaw > 0) {
-//      motor4 += (yaw * 1 / 4);
-//      motor1 += (yaw * 1 / 4);
-//    }
-//    else if (yaw < 0) {
-//      motor3 += -(yaw * 1 / 4);
-//      motor2 += -(yaw * 1 / 4);
-//    }
-//  }
+
+
+  desiredAngleX = map(pitch, -1, 1, -15, 15);
+  desiredAngleY = map(yaw, -1, 1, -15, 15);
+  //  if (pitch > tolerance || pitch < -tolerance) {
+  //    if (pitch > 0) {
+  //      motor1 += (pitch * 1 / 4);
+  //      motor2 += (pitch * 1 / 4);
+  //    }
+  //    else if (pitch < 0) {
+  //      motor3 += -(pitch * 1 / 4);
+  //      motor4 += -(pitch * 1 / 4);
+  //    }
+  //  }
+  //  if (yaw > tolerance || yaw < -tolerance) {
+  //    if (yaw > 0) {
+  //      motor4 += (yaw * 1 / 4);
+  //      motor1 += (yaw * 1 / 4);
+  //    }
+  //    else if (yaw < 0) {
+  //      motor3 += -(yaw * 1 / 4);
+  //      motor2 += -(yaw * 1 / 4);
+  //    }
+  //  }
 }
 
 void resetMotors() {
@@ -376,19 +406,19 @@ void runMotors() {
     motor4Speed = motorRest;
   }
 
-  if(motor1Speed > motorMax){
+  if (motor1Speed > motorMax) {
     motor1Speed = motorMax;
   }
 
-  if(motor2Speed > motorMax){
+  if (motor2Speed > motorMax) {
     motor2Speed = motorMax;
   }
-  
-  if(motor3Speed > motorMax){
+
+  if (motor3Speed > motorMax) {
     motor3Speed = motorMax;
   }
-  
-  if(motor4Speed > motorMax){
+
+  if (motor4Speed > motorMax) {
     motor4Speed = motorMax;
   }
 
